@@ -12,8 +12,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "../WiringPi/wiringPi/wiringPi.h"
 #include <stdio.h>
+#include <pigpio.h>
 
 /* max LCD message size, 16x2 */
 #define MAX_MSG_SIZE    (32)
@@ -26,15 +26,15 @@
 #define D7    (18)
 
 /* 37us execution time for commands */
-#define CMD_DELAY_uS        (37)
+#define CMD_DELAY_uS        (37000)
 /* 100us delay for 3rd function set */
-#define FUNCSET_DELAY_uS    (100)
+#define FUNCSET_DELAY_uS    (100000)
 /* 1.52ms delay for cursor return */
-#define HOME_DELAY_uS       (1520)   
+#define HOME_DELAY_uS       (1520000)   
 /* 15ms powerup delay */
-#define POWERUP_DELAY_MS    (15)
+#define POWERUP_DELAY_MS    (15000)
 /* 4.1ms delay for function set, round to 5 */
-#define FUNCSET_DELAY_MS    (5)
+#define FUNCSET_DELAY_MS    (5000)
 
 /* access modes for use with RS */
 #define CMD     (0)

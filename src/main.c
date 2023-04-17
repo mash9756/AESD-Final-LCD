@@ -7,33 +7,53 @@
  *  @version    1.0
 */
 
+
+/**
+ * scp LCD.c LCD.h main.c makefile mash9756@192.168.1.161:/home/mash9756/LCD
+ * scp main mash9756@192.168.1.161:/home/mash9756/LCD
+ * 
+ * ssh mash9756@192.168.1.161
+ * 
+ * arm-linux-gnueabihf-gcc
+ * 
+ * username: mash9756
+ * password: aesd2021
+ * 
+ * -L/user/local/lib/ -I/home/admin/Documents/Final-Project/pigpio/
+ * 
+ * PATH=/home/admin/Downloads/cross-pi-gcc-10.2.0-0/bin:$PATH
+ * 
+ * update-alternatives --install /usr/bin/arm-linux-gnueabihf-gcc arm-linux-gnueabihf-gcc /usr/bin/arm-linux-gnueabihf-gcc-10-2 100
+ * 
+*/
+
 #include "LCD.h"
 const int ledPin = 21;
 
 int main(){
-    wiringPiSetupGpio(); // Initialise WiringPi with Broadcom GPIO pins
+    gpioInitialise(); // Initialise WiringPi with Broadcom GPIO pins
 
-    pinMode(ledPin, OUTPUT); // Set LED Pin as an output
-    pinMode(RS,    OUTPUT);
-    pinMode(E,     OUTPUT);
-    pinMode(D4,    OUTPUT);
-    pinMode(D5,    OUTPUT);
-    pinMode(D6,    OUTPUT);
-    pinMode(D7,    OUTPUT);
+    gpioSetMode(ledPin, PI_OUTPUT); // Set LED Pin as an output
+    gpioSetMode(RS,     PI_OUTPUT);
+    gpioSetMode(E,      PI_OUTPUT);
+    gpioSetMode(D4,     PI_OUTPUT);
+    gpioSetMode(D5,     PI_OUTPUT);
+    gpioSetMode(D6,     PI_OUTPUT);
+    gpioSetMode(D7,     PI_OUTPUT);
 
     printf("\nHello World!\n");
 
     // Turn LED On
     printf("LED On\n");
-    digitalWrite(ledPin, HIGH);
+    gpioWrite(ledPin, PI_HIGH);
 
-    delay(1000);
+    gpioDelay(1000000);
 
     // Turn LED off
     printf("LED Off\n");
-    digitalWrite(ledPin, LOW);
+    gpioWrite(ledPin, PI_LOW);
 
-    delay(1000);
+    gpioDelay(1000000);
 
     LCD_init();
 
