@@ -16,7 +16,7 @@ main_o:
 	$(RPIGCC) $(FLAGS) -c main.c -o main.o $(LIBS) $(HDRS) -pthread -lpigpio -lrt
 
 host: main_host_o
-	$(CC) $(FLAGS) main.o LCD.o -o main -pthread -lpigpio -lrt
+	$(CC) $(FLAGS) main.o $(TARGET).o -o main -pthread -lpigpio -lrt
 
 main_host_o:
 	$(CC) $(FLAGS) -c $(TARGET).c -o $(TARGET).o -pthread -lpigpio -lrt

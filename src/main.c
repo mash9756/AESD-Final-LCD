@@ -31,7 +31,7 @@
 const int ledPin = 21;
 
 int main(){
-    gpioInitialise(); // Initialise WiringPi with Broadcom GPIO pins
+    gpioInitialise(); // Initialise pigpio with Broadcom GPIO pins
 
     gpioSetMode(ledPin, PI_OUTPUT); // Set LED Pin as an output
     gpioSetMode(RS,     PI_OUTPUT);
