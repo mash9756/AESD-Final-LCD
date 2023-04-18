@@ -1,17 +1,19 @@
 
 CC=gcc
-RPIGCC=/home/admin/Downloads/cross-pi-gcc-10.2.0-0/bin/arm-linux-gnueabihf-gcc
+RPIGCC=arm-linux-gnueabihf-gcc
 FLAGS=-Wall -Werror
 TARGET=LCD
+LIBS=-L/home/admin/pigpio-master
+HDRS=-I/home/admin/pigpio-master
 
 all: default
 
 default: main_o
-	$(RPIGCC) $(FLAGS) main.o LCD.o -o main -I/home/admin/Documents/Final-Project/pigpio/ -L/usr/local/lib -pthread -lpigpio -lrt
+	$(RPIGCC) $(FLAGS) main.o $(TARGET).o -o main $(LIBS) $(HDRS) -pthread -lpigpio -lrt
 
 main_o:
-	$(RPIGCC) $(FLAGS) -c $(TARGET).c -o $(TARGET).o -I/home/admin/Documents/Final-Project/pigpio/ -L/usr/local/lib -pthread -lpigpio -lrt
-	$(RPIGCC) $(FLAGS) -c main.c -o main.o -I/home/admin/Documents/Final-Project/pigpio/ -L/usr/local/lib -pthread -lpigpio -lrt
+	$(RPIGCC) $(FLAGS) -c $(TARGET).c -o $(TARGET).o $(LIBS) $(HDRS) -pthread -lpigpio -lrt
+	$(RPIGCC) $(FLAGS) -c main.c -o main.o $(LIBS) $(HDRS) -pthread -lpigpio -lrt
 
 host: main_host_o
 	$(CC) $(FLAGS) main.o LCD.o -o main -pthread -lpigpio -lrt
