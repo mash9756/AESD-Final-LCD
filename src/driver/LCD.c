@@ -25,11 +25,29 @@
 */
 
 /**
+ * when and how should we init the pigpio library on startup?
+ * should we kill the pigpio pid before loading LCD driver?
+ *  try that, init gpio in LCD init then maybe
+ * 
+ *  maybe we dont need to use the gpioInitialize to start?
+ *      could avoid having to kill pigpio pid on start
+ *      try removing gpioInitialize and add setup individual pins in LCD_init
+ * 
+*/
+
+/**
  *  LCD Operation
  *      2 8-bit registers, IR and DR
 */
 void LCD_init()
 {
+    gpioSetMode(RS,     PI_OUTPUT);
+    gpioSetMode(E,      PI_OUTPUT);
+    gpioSetMode(D4,     PI_OUTPUT);
+    gpioSetMode(D5,     PI_OUTPUT);
+    gpioSetMode(D6,     PI_OUTPUT);
+    gpioSetMode(D7,     PI_OUTPUT);
+
     gpioDelay(POWERUP_DELAY_MS);
 /* set 8-bit mode 3 times on start see data sheet init sequence for detail*/
     LCD_write(0x03, CMD);   

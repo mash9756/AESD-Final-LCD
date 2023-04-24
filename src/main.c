@@ -3,8 +3,6 @@
  *  @author     Mark Sherman
  * 
  *  @brief      main loop
- *  @date       4/1/23
- *  @version    1.0
 */
 
 
@@ -57,6 +55,6 @@ int main(){
 
     LCD_init();
 
-    LCD_test("It's me, Caralyn");
+    LCD_print("It's me, Caralyn");
     return 0;
 }
