@@ -1,0 +1,23 @@
+#!/bin/sh
+
+echo "Initializing LCD..."
+
+sleep .05
+echo  003 > /dev/LCD_device
+sleep .05
+echo  003 > /dev/LCD_device
+sleep .05
+echo  003 > /dev/LCD_device
+sleep .05
+echo  002 > /dev/LCD_device
+sleep .05
+echo  00C > /dev/LCD_device
+sleep .05
+echo  001 > /dev/LCD_device
+sleep .05
+echo  006 > /dev/LCD_device
+sleep .05
+echo  028 > /dev/LCD_device
+sleep .05
+
+echo "Done!"

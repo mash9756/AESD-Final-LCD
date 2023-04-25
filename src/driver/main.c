@@ -3,6 +3,8 @@
  *  @author     Mark Sherman
  * 
  *  @brief      LCD driver functions
+ * 
+ * https://embetronicx.com/tutorials/linux/device-drivers/gpio-driver-basic-using-raspberry-pi/
 */
 
 #include <linux/module.h>
