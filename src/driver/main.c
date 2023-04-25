@@ -26,9 +26,10 @@ int LCD_minor =   0;
 MODULE_AUTHOR("Mark Sherman");
 MODULE_LICENSE("Dual BSD/GPL");
 
-dev_t dev = 0;
+dev_t device = 0;
 struct LCD_dev LCD_device;
 static struct class *dev_class;
+//static bool init_flag = false;
 
 int LCD_open(struct inode *inode, struct file *filp)
 {
@@ -118,7 +119,10 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     for(i = 0; i < count; i++)
     {
     /* print entered string to LCD */
-        gpio_set_value(RS, 0);
+        if(input_buffer[0] == 0)
+            gpio_set_value(RS, CMD);
+        else
+            gpio_set_value(RS, CHAR);
 
     /* ensure data bus is all 0 to start */
         gpio_set_value(D4, 0);
@@ -146,13 +150,13 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
         gpio_set_value(D7, 0);
 
     /* write low bits */
-        if((input_buffer[i] & 0x01) == 0x10)
+        if((input_buffer[i] & 0x01) == 0x01)
             gpio_set_value(D4, 1);
-        if((input_buffer[i] & 0x02) == 0x20)
+        if((input_buffer[i] & 0x02) == 0x02)
             gpio_set_value(D5, 1);
-        if((input_buffer[i] & 0x04) == 0x40)
+        if((input_buffer[i] & 0x04) == 0x04)
             gpio_set_value(D6, 1);
-        if((input_buffer[i] & 0x08) == 0x80)
+        if((input_buffer[i] & 0x08) == 0x08)
             gpio_set_value(D7, 1);
 
     /* toggle enable to write first 4 bits */
@@ -261,8 +265,8 @@ int LCD_init_module(void)
 {
     int result;
     bool invalid = false;
-    result = alloc_chrdev_region(&dev, LCD_minor, 1, "LCDchar");
-    LCD_major = MAJOR(dev);
+    result = alloc_chrdev_region(&device, LCD_minor, 1, "LCDchar");
+    LCD_major = MAJOR(device);
     if (result < 0)
     {
         printk(KERN_WARNING "Can't get major %d\n", LCD_major);
@@ -274,7 +278,7 @@ int LCD_init_module(void)
 
     result = LCD_setup_cdev(&LCD_device);
     if (result)
-        unregister_chrdev_region(dev, 1);
+        unregister_chrdev_region(device, 1);
 
 /* Creating struct class */
     if(IS_ERR(dev_class = class_create(THIS_MODULE,"LCD_class")))
@@ -284,7 +288,7 @@ int LCD_init_module(void)
     }
 
 /* Creating device */
-    if(IS_ERR(device_create(dev_class,NULL,dev,NULL,"etx_device")))
+    if(IS_ERR(device_create(dev_class, NULL, device, NULL, "LCD_device")))
     {
         pr_err( "Cannot create the Device \n");
         goto device_invalid;
@@ -376,29 +380,33 @@ int LCD_init_module(void)
     gpio_export(D6, false);
     gpio_export(D7, false);
 
-    usleep_range(POWERUP_DELAY_MS, POWERUP_DELAY_MS + 10); 
-/* set 8-bit mode 3 times on start see data sheet init sequence for detail */
-    //LCD_write(0x03, CMD);   
-    usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
-    //LCD_write(0x03, CMD);
-    usleep_range(FUNCSET_DELAY_uS, FUNCSET_DELAY_uS + 10);   
-    //LCD_write(0x03, CMD);
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-/* set 4-bit mode now */
-    //LCD_write(0x02, CMD);
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10); 
-/* Display Off */  
-    //LCD_write(0x0C, CMD);
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-/* Display Clear */   
-    //LCD_write(0x01, CMD);
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-/* entry mode set */   
-    //LCD_write(0x06, CMD);
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-/* 2 rows */   
-    //LCD_write(0x28, CMD);
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+//     init_flag = true;
+
+//     usleep_range(POWERUP_DELAY_MS, POWERUP_DELAY_MS + 10); 
+// /* set 8-bit mode 3 times on start see data sheet init sequence for detail */
+//     LCD_write(0x03);   
+//     usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
+//     LCD_write(0x03, CMD);
+//     usleep_range(FUNCSET_DELAY_uS, FUNCSET_DELAY_uS + 10);   
+//     LCD_write(0x03, CMD);
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+// /* set 4-bit mode now */
+//     LCD_write(0x02, CMD);
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10); 
+// /* Display Off */  
+//     LCD_write(0x0C, CMD);
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+// /* Display Clear */   
+//     LCD_write(0x01, CMD);
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+// /* entry mode set */   
+//     LCD_write(0x06, CMD);
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+// /* 2 rows */   
+//     LCD_write(0x28, CMD);
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    
+//     init_flag = false;
 
     return result;
 
@@ -411,7 +419,7 @@ gpio_invalid:
     gpio_free(D7);
 
 device_invalid:
-    device_destroy(dev_class, dev);
+    device_destroy(dev_class, device);
 
 class_invalid:
     class_destroy(dev_class);
@@ -437,7 +445,7 @@ void LCD_cleanup_module(void)
     gpio_free(D6);
     gpio_free(D7);
 
-    device_destroy(dev_class, dev);
+    device_destroy(dev_class, device);
     class_destroy(dev_class);
 
     cdev_del(&LCD_device.cdev);
