@@ -130,7 +130,6 @@ void LCD_print(char msg[MAX_MSG_SIZE])
 {
     uint8_t i = 0;
     
-    printf("\nPrinting %s to LCD...\n\r", msg);
     while(msg[i] != '\0')
         LCD_write(msg[i++], CHAR);
 }

@@ -7,9 +7,6 @@
  *              https://www.sparkfun.com/datasheets/LCD/HD44780.pdf
 */
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
 #include <pigpio.h>
 
 /* max LCD message size, 16x2 */

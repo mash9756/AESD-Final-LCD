@@ -11,6 +11,8 @@ endif
 
 EXTRA_CFLAGS += $(DEBFLAGS)
 
+#CFLAGS_LCD.o := -pthread -lpigpio -lrt
+
 ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 obj-m	:= LCDchar.o
