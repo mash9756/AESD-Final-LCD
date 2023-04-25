@@ -14,7 +14,7 @@ EXTRA_CFLAGS += $(DEBFLAGS)
 ifneq ($(KERNELRELEASE),)
 # call from kernel build system
 obj-m	:= LCDchar.o
-aesdchar-y := LCD.o main.o
+LCDchar-y := LCD.o main.o
 else
 
 KERNELDIR ?= /lib/modules/$(shell uname -r)/build
