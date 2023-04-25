@@ -14,6 +14,10 @@
 #include <linux/slab.h>
 #include <linux/string.h>
 
+#include <linux/delay.h>
+#include <linux/uaccess.h>  //copy_to/from_user()
+#include <linux/gpio.h>     //GPIO
+
 #include "LCDchar.h"
 
 int LCD_major =   0; // use dynamic major
@@ -22,7 +26,9 @@ int LCD_minor =   0;
 MODULE_AUTHOR("Mark Sherman");
 MODULE_LICENSE("Dual BSD/GPL");
 
+dev_t dev = 0;
 struct LCD_dev LCD_device;
+static struct class *dev_class;
 
 int LCD_open(struct inode *inode, struct file *filp)
 {
@@ -49,12 +55,22 @@ ssize_t LCD_read(struct file *filp, char __user *buf, size_t count,
     return -EFAULT;
 }
 
+void LCD_toggle_enable(void)
+{
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    gpio_set_value(E, 0);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    gpio_set_value(E, 1);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+}
+
 ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     struct LCD_dev *dev = filp->private_data;  /* get pointer to our char device */
     ssize_t retval = 0;
     char *input_buffer = NULL;
+    size_t i = 0;
 
     PDEBUG("write %zu byte string %s to LCD", count, buf);
 
@@ -99,8 +115,49 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
  *          figure out how to change cursor position, add llseek??
 */
 
-/* print entered string to LCD */
-    LCD_print(input_buffer);
+    for(i = 0; i < count; i++)
+    {
+    /* print entered string to LCD */
+        gpio_set_value(RS, 0);
+
+    /* ensure data bus is all 0 to start */
+        gpio_set_value(D4, 0);
+        gpio_set_value(D5, 0);
+        gpio_set_value(D6, 0);
+        gpio_set_value(D7, 0);
+
+    /* write high bits */
+        if((input_buffer[i] & 0x10) == 0x10)
+            gpio_set_value(D4, 1);
+        if((input_buffer[i] & 0x20) == 0x20)
+            gpio_set_value(D5, 1);
+        if((input_buffer[i] & 0x40) == 0x40)
+            gpio_set_value(D6, 1);
+        if((input_buffer[i] & 0x80) == 0x80)
+            gpio_set_value(D7, 1);
+
+    /* toggle enable to write first 4 bits */
+        LCD_toggle_enable();
+
+    /* ensure data bus is all 0 to start */
+        gpio_set_value(D4, 0);
+        gpio_set_value(D5, 0);
+        gpio_set_value(D6, 0);
+        gpio_set_value(D7, 0);
+
+    /* write low bits */
+        if((input_buffer[i] & 0x01) == 0x10)
+            gpio_set_value(D4, 1);
+        if((input_buffer[i] & 0x02) == 0x20)
+            gpio_set_value(D5, 1);
+        if((input_buffer[i] & 0x04) == 0x40)
+            gpio_set_value(D6, 1);
+        if((input_buffer[i] & 0x08) == 0x80)
+            gpio_set_value(D7, 1);
+
+    /* toggle enable to write first 4 bits */
+        LCD_toggle_enable();
+    }
 
 free_kmem:
     kfree(input_buffer);
@@ -176,13 +233,14 @@ exit:
     return new_f_pos;
 }
 
-struct file_operations LCD_fops = {
+struct file_operations LCD_fops = 
+{
     .owner      = THIS_MODULE,
     .read       = LCD_read,
     .write      = LCD_write,
     .open       = LCD_open,
-    .release    = LCD_release,
-    .llseek     = LCD_llseek
+    .release    = LCD_release
+    //.llseek     = LCD_llseek
 };
 
 static int LCD_setup_cdev(struct LCD_dev *dev)
@@ -201,10 +259,9 @@ static int LCD_setup_cdev(struct LCD_dev *dev)
 
 int LCD_init_module(void)
 {
-    dev_t dev = 0;
     int result;
-    result = alloc_chrdev_region(&dev, LCD_minor, 1,
-                                 "LCDchar");
+    bool invalid = false;
+    result = alloc_chrdev_region(&dev, LCD_minor, 1, "LCDchar");
     LCD_major = MAJOR(dev);
     if (result < 0)
     {
@@ -214,20 +271,174 @@ int LCD_init_module(void)
     memset(&LCD_device, 0, sizeof(struct LCD_dev));
 
     mutex_init(&LCD_device.mutex);
-    LCD_init();
 
     result = LCD_setup_cdev(&LCD_device);
-
     if (result)
-    {
         unregister_chrdev_region(dev, 1);
+
+/* Creating struct class */
+    if(IS_ERR(dev_class = class_create(THIS_MODULE,"LCD_class")))
+    {
+        pr_err("Cannot create the struct class\n");
+        goto class_invalid;
     }
+
+/* Creating device */
+    if(IS_ERR(device_create(dev_class,NULL,dev,NULL,"etx_device")))
+    {
+        pr_err( "Cannot create the Device \n");
+        goto device_invalid;
+    }
+
+/* Check each GPIO for validity */
+    if(gpio_is_valid(RS) == false)
+    {
+        pr_err("GPIO %d is not valid\n", RS);
+        invalid = true;
+    }
+
+    if(gpio_is_valid(E) == false)
+    {
+        pr_err("GPIO %d is not valid\n", E);
+        invalid = true;
+    }
+
+    if(gpio_is_valid(D4) == false)
+    {
+        pr_err("GPIO %d is not valid\n", D4);
+        invalid = true;
+    }
+
+    if(gpio_is_valid(D5) == false)
+    {
+        pr_err("GPIO %d is not valid\n", D5);
+        invalid = true;
+    }
+
+    if(gpio_is_valid(D6) == false)
+    {
+        pr_err("GPIO %d is not valid\n", D6);
+        invalid = true;
+    }
+
+    if(gpio_is_valid(D7) == false)
+    {
+        pr_err("GPIO %d is not valid\n", D7);
+        invalid = true;
+    }
+
+    if(invalid)
+        goto gpio_invalid;
+
+/* request control of LCD GPIO pins */
+    if(gpio_request(RS,"RS") < 0)
+    {
+        pr_err("ERROR: GPIO %d request\n", RS);
+        goto gpio_invalid;
+    }
+    if(gpio_request(E,"E") < 0)
+    {
+        pr_err("ERROR: GPIO %d request\n", E);
+        goto gpio_invalid;
+    }
+    if(gpio_request(D4,"D4") < 0)
+    {
+        pr_err("ERROR: GPIO %d request\n", D4);
+        goto gpio_invalid;
+    }
+    if(gpio_request(D5,"D5") < 0)
+    {
+        pr_err("ERROR: GPIO %d request\n", D5);
+        goto gpio_invalid;
+    }
+    if(gpio_request(D6,"D6") < 0)
+    {
+        pr_err("ERROR: GPIO %d request\n", D6);
+        goto gpio_invalid;
+    }
+    if(gpio_request(D7,"D7") < 0)
+    {
+        pr_err("ERROR: GPIO %d request\n", D7);
+        goto gpio_invalid;
+    }
+
+    gpio_direction_output(RS, 0);
+    gpio_direction_output(E,  0);
+    gpio_direction_output(D4, 0);
+    gpio_direction_output(D5, 0);
+    gpio_direction_output(D6, 0);
+    gpio_direction_output(D7, 0);
+
+    gpio_export(RS, false);
+    gpio_export(E, false);
+    gpio_export(D4, false);
+    gpio_export(D5, false);
+    gpio_export(D6, false);
+    gpio_export(D7, false);
+
+    usleep_range(POWERUP_DELAY_MS, POWERUP_DELAY_MS + 10); 
+/* set 8-bit mode 3 times on start see data sheet init sequence for detail */
+    //LCD_write(0x03, CMD);   
+    usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
+    //LCD_write(0x03, CMD);
+    usleep_range(FUNCSET_DELAY_uS, FUNCSET_DELAY_uS + 10);   
+    //LCD_write(0x03, CMD);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+/* set 4-bit mode now */
+    //LCD_write(0x02, CMD);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10); 
+/* Display Off */  
+    //LCD_write(0x0C, CMD);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+/* Display Clear */   
+    //LCD_write(0x01, CMD);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+/* entry mode set */   
+    //LCD_write(0x06, CMD);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+/* 2 rows */   
+    //LCD_write(0x28, CMD);
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+
     return result;
+
+gpio_invalid:
+    gpio_free(RS);
+    gpio_free(E);
+    gpio_free(D4);
+    gpio_free(D5);
+    gpio_free(D6);
+    gpio_free(D7);
+
+device_invalid:
+    device_destroy(dev_class, dev);
+
+class_invalid:
+    class_destroy(dev_class);
+
+    return -EFAULT;
 }
 
 void LCD_cleanup_module(void)
 {
     dev_t devno = MKDEV(LCD_major, LCD_minor);
+
+    gpio_unexport(RS);
+    gpio_unexport(E);
+    gpio_unexport(D4);
+    gpio_unexport(D5);
+    gpio_unexport(D6);
+    gpio_unexport(D7);
+
+    gpio_free(RS);
+    gpio_free(E);
+    gpio_free(D4);
+    gpio_free(D5);
+    gpio_free(D6);
+    gpio_free(D7);
+
+    device_destroy(dev_class, dev);
+    class_destroy(dev_class);
 
     cdev_del(&LCD_device.cdev);
 
