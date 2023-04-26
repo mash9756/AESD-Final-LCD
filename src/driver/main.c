@@ -36,7 +36,7 @@ static struct class *dev_class;
 int LCD_open(struct inode *inode, struct file *filp)
 {
     struct LCD_dev *dev;
-    PDEBUG("open");
+    PDEBUG("LCD open");
 
     dev = container_of(inode->i_cdev, struct LCD_dev, cdev);
     filp->private_data = dev;
@@ -45,7 +45,7 @@ int LCD_open(struct inode *inode, struct file *filp)
 
 int LCD_release(struct inode *inode, struct file *filp)
 {
-    PDEBUG("release");
+    PDEBUG("LCD release");
 
     filp->private_data = NULL;
     return 0;
@@ -55,11 +55,14 @@ ssize_t LCD_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     /* only writing to the LCD is permitted, read will always return error */
+    PDEBUG("LCD Read, you shouldn't be here!");
     return -EFAULT;
 }
 
 void LCD_toggle_enable(void)
 {
+    PDEBUG("toggle enable");
+
     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
     gpio_set_value(E, 0);
     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
@@ -80,12 +83,14 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
 /* parameter error handling */
     if(filp == NULL || buf == NULL || f_pos == NULL)
     {
+        PDEBUG("NULL Paramenter found");
         retval = -EFAULT;
         goto exit;
     }
 /* check total buffer size */
     if(count > MAX_MSG_SIZE)
     {
+        PDEBUG("Message too long");
         retval = -EFAULT;
         goto exit;
     }
@@ -93,6 +98,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
 /* obtain mutex, exit on failure */
     if(mutex_lock_interruptible(&dev->mutex) != 0)
     {
+        PDEBUG("Mutex failed to lock");
         retval = -ERESTARTSYS;
         goto exit;
     }
@@ -101,6 +107,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     input_buffer = (char *)kmalloc(count, GFP_KERNEL);
     if(input_buffer == NULL)
     {
+        PDEBUG("kmalloc failed");
         retval = -ENOMEM;
         goto exit;
     }
@@ -108,6 +115,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
 /* returns 0 on success, >0 is number of bytes not written */
     if(copy_from_user(input_buffer, buf, count))
     {
+        PDEBUG("Copy from user failed");
         retval = -EFAULT;
         goto free_kmem;
     }
@@ -120,6 +128,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
 
     for(i = 0; i < count; i++)
     {
+        PDEBUG("i = %ld", i);
     /* print entered string to LCD */
         // if(input_buffer[0] == 0)
         //     gpio_set_value(RS, CMD);
@@ -129,12 +138,14 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
         //gpio_set_value(RS, CMD);
 
     /* ensure data bus is all 0 to start */
+        PDEBUG("Zeroing Data Bus");
         gpio_set_value(D4, 0);
         gpio_set_value(D5, 0);
         gpio_set_value(D6, 0);
         gpio_set_value(D7, 0);
 
     /* write high bits */
+        PDEBUG("Writing MSB");
         if((input_buffer[i] & 0x10) == 0x10)
             gpio_set_value(D4, 1);
         if((input_buffer[i] & 0x20) == 0x20)
@@ -148,12 +159,14 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
         LCD_toggle_enable();
 
     /* ensure data bus is all 0 to start */
+        PDEBUG("Zeroing Data Bus");
         gpio_set_value(D4, 0);
         gpio_set_value(D5, 0);
         gpio_set_value(D6, 0);
         gpio_set_value(D7, 0);
 
     /* write low bits */
+        PDEBUG("Writing LSB");
         if((input_buffer[i] & 0x01) == 0x01)
             gpio_set_value(D4, 1);
         if((input_buffer[i] & 0x02) == 0x02)
@@ -255,6 +268,8 @@ static int LCD_setup_cdev(struct LCD_dev *dev)
 {
     int err, devno = MKDEV(LCD_major, LCD_minor);
 
+    PDEBUG("LCD Setup cdev");
+
     cdev_init(&dev->cdev, &LCD_fops);
     dev->cdev.owner = THIS_MODULE;
     dev->cdev.ops = &LCD_fops;
@@ -269,6 +284,9 @@ int LCD_init_module(void)
 {
     int result;
     bool invalid = false;
+
+    PDEBUG("LCD Init");
+
     result = alloc_chrdev_region(&device, LCD_minor, 1, "LCDchar");
     LCD_major = MAJOR(device);
     if (result < 0)
@@ -287,51 +305,51 @@ int LCD_init_module(void)
 /* Creating struct class */
     if(IS_ERR(dev_class = class_create(THIS_MODULE,"LCD_class")))
     {
-        pr_err("Cannot create the struct class\n");
+        PDEBUG("Cannot create the struct class\n");
         goto class_invalid;
     }
 
 /* Creating device */
     if(IS_ERR(device_create(dev_class, NULL, device, NULL, "LCD_device")))
     {
-        pr_err( "Cannot create the Device \n");
+        PDEBUG( "Cannot create the Device \n");
         goto device_invalid;
     }
 
 /* Check each GPIO for validity */
     if(gpio_is_valid(RS) == false)
     {
-        pr_err("GPIO %d is not valid\n", RS);
+        PDEBUG("GPIO %d is not valid\n", RS);
         invalid = true;
     }
 
     if(gpio_is_valid(E) == false)
     {
-        pr_err("GPIO %d is not valid\n", E);
+        PDEBUG("GPIO %d is not valid\n", E);
         invalid = true;
     }
 
     if(gpio_is_valid(D4) == false)
     {
-        pr_err("GPIO %d is not valid\n", D4);
+        PDEBUG("GPIO %d is not valid\n", D4);
         invalid = true;
     }
 
     if(gpio_is_valid(D5) == false)
     {
-        pr_err("GPIO %d is not valid\n", D5);
+        PDEBUG("GPIO %d is not valid\n", D5);
         invalid = true;
     }
 
     if(gpio_is_valid(D6) == false)
     {
-        pr_err("GPIO %d is not valid\n", D6);
+        PDEBUG("GPIO %d is not valid\n", D6);
         invalid = true;
     }
 
     if(gpio_is_valid(D7) == false)
     {
-        pr_err("GPIO %d is not valid\n", D7);
+        PDEBUG("GPIO %d is not valid\n", D7);
         invalid = true;
     }
 
@@ -341,35 +359,36 @@ int LCD_init_module(void)
 /* request control of LCD GPIO pins */
     if(gpio_request(RS,"RS") < 0)
     {
-        pr_err("ERROR: GPIO %d request\n", RS);
+        PDEBUG("ERROR: GPIO %d request\n", RS);
         goto gpio_invalid;
     }
     if(gpio_request(E,"E") < 0)
     {
-        pr_err("ERROR: GPIO %d request\n", E);
+        PDEBUG("ERROR: GPIO %d request\n", E);
         goto gpio_invalid;
     }
     if(gpio_request(D4,"D4") < 0)
     {
-        pr_err("ERROR: GPIO %d request\n", D4);
+        PDEBUG("ERROR: GPIO %d request\n", D4);
         goto gpio_invalid;
     }
     if(gpio_request(D5,"D5") < 0)
     {
-        pr_err("ERROR: GPIO %d request\n", D5);
+        PDEBUG("ERROR: GPIO %d request\n", D5);
         goto gpio_invalid;
     }
     if(gpio_request(D6,"D6") < 0)
     {
-        pr_err("ERROR: GPIO %d request\n", D6);
+        PDEBUG("ERROR: GPIO %d request\n", D6);
         goto gpio_invalid;
     }
     if(gpio_request(D7,"D7") < 0)
     {
-        pr_err("ERROR: GPIO %d request\n", D7);
+        PDEBUG("ERROR: GPIO %d request\n", D7);
         goto gpio_invalid;
     }
 
+    PDEBUG("Setting GPIO directions");
     gpio_direction_output(RS, 0);
     gpio_direction_output(E,  0);
     gpio_direction_output(D4, 0);
@@ -377,6 +396,7 @@ int LCD_init_module(void)
     gpio_direction_output(D6, 0);
     gpio_direction_output(D7, 0);
 
+    PDEBUG("Exporting GPIO for user access");
     gpio_export(RS, false);
     gpio_export(E, false);
     gpio_export(D4, false);
@@ -411,7 +431,7 @@ int LCD_init_module(void)
 //     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
     
 //     init_flag = false;
-
+    PDEBUG("Init Complete!");
     return result;
 
 gpio_invalid:
@@ -428,12 +448,15 @@ device_invalid:
 class_invalid:
     class_destroy(dev_class);
 
+    PDEBUG("Init Failed, returning fault");
     return -EFAULT;
 }
 
 void LCD_cleanup_module(void)
 {
     dev_t devno = MKDEV(LCD_major, LCD_minor);
+
+    PDEBUG("LCD Cleanup");
 
     gpio_unexport(RS);
     gpio_unexport(E);
