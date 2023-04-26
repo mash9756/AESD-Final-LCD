@@ -180,13 +180,19 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
         LCD_toggle_enable();
     }
 
+    PDEBUG("Write Complete!")
 free_kmem:
+    PDEBUG("kfree")
     kfree(input_buffer);
 
 exit:
 /* release mutex */
-    mutex_unlock(&dev->mutex);
-
+    if(mutex_unlock(&dev->mutex) != 0)
+    {
+        PDEBUG("Mutex failed to unlock");
+        retval = -ERESTARTSYS;
+    }
+    PDEBUG("returning %d", retval);
     return retval;
 }
 
