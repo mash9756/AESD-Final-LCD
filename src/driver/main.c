@@ -121,10 +121,12 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     for(i = 0; i < count; i++)
     {
     /* print entered string to LCD */
-        if(input_buffer[0] == 0)
-            gpio_set_value(RS, CMD);
-        else
-            gpio_set_value(RS, CHAR);
+        // if(input_buffer[0] == 0)
+        //     gpio_set_value(RS, CMD);
+        // else
+        //     gpio_set_value(RS, CHAR);
+
+        //gpio_set_value(RS, CMD);
 
     /* ensure data bus is all 0 to start */
         gpio_set_value(D4, 0);

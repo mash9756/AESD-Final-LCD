@@ -2,22 +2,26 @@
 
 echo "Initializing LCD..."
 
+echo 0 > /sys/class/gpio/gpio7/value
+
 sleep .05
-echo  003 > /dev/LCD_device
+echo  '\x03' >> /dev/LCD_device
 sleep .05
-echo  003 > /dev/LCD_device
+echo  '\x03' >> /dev/LCD_device
 sleep .05
-echo  003 > /dev/LCD_device
+echo  '\x03' >> /dev/LCD_device
 sleep .05
-echo  002 > /dev/LCD_device
+echo  '\x02' >> /dev/LCD_device
 sleep .05
-echo  00C > /dev/LCD_device
+echo  '\x0C' >> /dev/LCD_device
 sleep .05
-echo  001 > /dev/LCD_device
+echo  '\x01' >> /dev/LCD_device
 sleep .05
-echo  006 > /dev/LCD_device
+echo  '\x06' >> /dev/LCD_device
 sleep .05
-echo  028 > /dev/LCD_device
+echo  '\x28' >> /dev/LCD_device
 sleep .05
 
 echo "Done!"
+
+echo 1 > /sys/class/gpio/gpio7/value
