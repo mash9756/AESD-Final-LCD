@@ -1,27 +1,29 @@
 #!/bin/sh
 
-echo "Initializing LCD..."
-
+echo "Clearing RS pin for config..."
 echo 0 > /sys/class/gpio/gpio7/value
-
-sleep .05
-echo  '\x03' >> /dev/LCD_device
-sleep .05
-echo  '\x03' >> /dev/LCD_device
-sleep .05
-echo  '\x03' >> /dev/LCD_device
-sleep .05
-echo  '\x02' >> /dev/LCD_device
-sleep .05
-echo  '\x0C' >> /dev/LCD_device
-sleep .05
-echo  '\x01' >> /dev/LCD_device
-sleep .05
-echo  '\x06' >> /dev/LCD_device
-sleep .05
-echo  '\x28' >> /dev/LCD_device
-sleep .05
-
 echo "Done!"
 
+echo "Initializing LCD..."
+sleep .05
+echo -e -n '\x03' >> /dev/LCD_device
+sleep .05
+echo -e -n '\x03' >> /dev/LCD_device
+sleep .05
+echo -e -n '\x03' >> /dev/LCD_device
+sleep .05
+echo -e -n '\x02' >> /dev/LCD_device
+sleep .05
+echo -e -n '\x0C' >> /dev/LCD_device
+sleep .05
+echo -e -n '\x01' >> /dev/LCD_device
+sleep .05
+echo -e -n '\x06' >> /dev/LCD_device
+sleep .05
+echo -e -n '\x28' >> /dev/LCD_device
+sleep .05
+echo "Done!"
+
+echo "Setting RS pin for printing..."
 echo 1 > /sys/class/gpio/gpio7/value
+echo "Done!"
