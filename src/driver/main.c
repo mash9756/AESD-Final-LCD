@@ -181,6 +181,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     }
 
     PDEBUG("Write Complete!");
+    retval = i;
 free_kmem:
     PDEBUG("kfree");
     kfree(input_buffer);
