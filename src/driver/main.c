@@ -21,6 +21,7 @@
 #include <linux/gpio.h>     //GPIO
 
 #include "LCDchar.h"
+#include "LCD_ioctl"
 
 int LCD_major =   0; // use dynamic major
 int LCD_minor =   0;
@@ -31,25 +32,6 @@ MODULE_LICENSE("Dual BSD/GPL");
 dev_t device = 0;
 struct LCD_dev LCD_device;
 static struct class *dev_class;
-//static bool init_flag = false;
-
-int LCD_open(struct inode *inode, struct file *filp)
-{
-    struct LCD_dev *dev;
-    PDEBUG("LCD open");
-
-    dev = container_of(inode->i_cdev, struct LCD_dev, cdev);
-    filp->private_data = dev;
-    return 0;
-}
-
-int LCD_release(struct inode *inode, struct file *filp)
-{
-    PDEBUG("LCD release");
-
-    filp->private_data = NULL;
-    return 0;
-}
 
 ssize_t LCD_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
@@ -81,7 +63,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     PDEBUG("write %zu byte string %s to LCD", count, buf);
 
 /* parameter error handling */
-    if(filp == NULL || buf == NULL || f_pos == NULL)
+    if(filp == NULL || buf == NULL)
     {
         PDEBUG("NULL Paramenter found");
         retval = -EFAULT;
@@ -120,23 +102,8 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
         goto free_kmem;
     }
 
-/** 
- * TODO: add size handling for LCD
- *          16 chars per row, 2 rows
- *          figure out how to change cursor position, add llseek??
-*/
-
     for(i = 0; i < count; i++)
     {
-        PDEBUG("i = %ld", i);
-    /* print entered string to LCD */
-        // if(input_buffer[0] == 0)
-        //     gpio_set_value(RS, CMD);
-        // else
-        //     gpio_set_value(RS, CHAR);
-
-        //gpio_set_value(RS, CMD);
-
     /* ensure data bus is all 0 to start */
         PDEBUG("Zeroing Data Bus");
         gpio_set_value(D4, 0);
@@ -180,8 +147,10 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
         LCD_toggle_enable();
     }
 
-    PDEBUG("Write Complete!");
     retval = i;
+    filp->f_pos = retval;
+    PDEBUG("Write Complete! Updated f_pos to %lld", filp->f_pos);
+
 free_kmem:
     PDEBUG("kfree");
     kfree(input_buffer);
@@ -194,6 +163,8 @@ exit:
     return retval;
 }
 
+
+/** TODO:    Do we need to change cursor position, add llseek?? */
 /**
  *  @name   LCD_llseek
  *  @brief  adds lseek functionality
@@ -258,13 +229,114 @@ exit:
     return new_f_pos;
 }
 
+/**
+ *  @name   LCD_unlocked_ioctl
+ *  @brief  add ioctl functionality, supports single command to clear display
+ * 
+ *  @param  filp    our device
+ *  @param  cmd     ioctl command to execute
+ *  @param  arg     arguments to pass with cmd
+ * 
+ *  @return 0 on success, error on failure
+ * 
+ *  followed general format from https://embetronicx.com/tutorials/linux/device-drivers/ioctl-tutorial-in-linux/
+*/
+long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+    long retval = 0;
+    struct LCD_dev *dev = filp->private_data;
+
+    PDEBUG("ioctl");
+
+/* obtain mutex, exit on failure */
+    if(mutex_lock_interruptible(&dev->mutex) != 0)
+    {
+        retval = -ERESTARTSYS;
+        goto exit;
+    }
+
+    switch(cmd)
+    {
+        /** 
+         * issue command to clear LCD display 
+         * 
+         * include ioctl header in VL6180x source
+         *  ioctl(fd, LCDCHAR_IOCCLEAR, 0?) 
+        */
+        case LCDCHAR_IOCCLEAR:
+        {
+            PDEBUG("LCDCHAR_IOCCLEAR");
+            gpio_set_value(RS, CMD);
+            /* pass opened filp, clear command, count, file position */
+            LCD_write(filp, (char *)LCD_CLEAR_INS, 1, 0);
+            gpio_set_value(RS, CHAR);
+            break;
+        }
+        default:
+            PDEBUG("cmd not recognized");
+    }
+exit:
+/* release mutex */
+    PDEBUG("Returning: %ld", retval);
+    mutex_unlock(&dev->mutex);
+    return retval;
+}
+
+int LCD_open(struct inode *inode, struct file *filp)
+{
+    struct LCD_dev *dev;
+    PDEBUG("LCD open");
+
+    dev = container_of(inode->i_cdev, struct LCD_dev, cdev);
+    filp->private_data = dev;
+
+/* add init sequence here using passed filp as arg for LCD_write? */
+
+    PDEBUG("Initializing LCD");
+/* set 8-bit mode 3 times on start see data sheet init sequence for detail */
+    usleep_range(POWERUP_DELAY_MS, POWERUP_DELAY_MS + 10);
+    LCD_write(filp, (char *)0x03, 1, 0);
+    usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
+    LCD_write(filp, (char *)0x03, 1, 0);
+    usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
+    LCD_write(filp, (char *)0x03, 1, 0);
+/* set 4-bit mode now */
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    LCD_write(filp, (char *)0x02, 1, 0);
+/* Display Off */  
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    LCD_write(filp, (char *)LCD_DISPLAY_OFF_INS, 1, 0);
+/* Display Clear */ 
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    LCD_write(filp, (char *)LCD_CLEAR_INS, 1, 0);
+/* entry mode set */  
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    LCD_write(filp, (char *)0x06, 1, 0);
+/* use 2 rows */   
+    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+    LCD_write(filp, (char *)0x28, 1, 0);
+    PDEBUG("Done!");
+
+    return 0;
+}
+
+int LCD_release(struct inode *inode, struct file *filp)
+{
+    PDEBUG("LCD release");
+
+    filp->private_data = NULL;
+    return 0;
+}
+
+
 struct file_operations LCD_fops = 
 {
-    .owner      = THIS_MODULE,
-    .read       = LCD_read,
-    .write      = LCD_write,
-    .open       = LCD_open,
-    .release    = LCD_release
+    .owner          = THIS_MODULE,
+    .read           = LCD_read,
+    .write          = LCD_write,
+    .open           = LCD_open,
+    .release        = LCD_release,
+    .unlocked_ioctl = LCD_unlocked_ioctl
     //.llseek     = LCD_llseek
 };
 
@@ -289,7 +361,7 @@ int LCD_init_module(void)
     int result;
     bool invalid = false;
 
-    PDEBUG("LCD Init");
+    PDEBUG("LCD Init Module");
 
     result = alloc_chrdev_region(&device, LCD_minor, 1, "LCDchar");
     LCD_major = MAJOR(device);
@@ -313,7 +385,10 @@ int LCD_init_module(void)
         goto class_invalid;
     }
 
-/* Creating device */
+/** Creating device 
+ * TODO:    Might be redundant to alloc_chrdev_regiod? 
+ *          seems like echo to both LCDchar and LCD_device work
+*/
     if(IS_ERR(device_create(dev_class, NULL, device, NULL, "LCD_device")))
     {
         PDEBUG( "Cannot create the Device \n");
@@ -400,6 +475,7 @@ int LCD_init_module(void)
     gpio_direction_output(D6, 0);
     gpio_direction_output(D7, 0);
 
+/** TODO: Remove LCD data bus pins from export for safety */
     PDEBUG("Exporting GPIO for user access");
     gpio_export(RS, false);
     gpio_export(E, false);
@@ -408,33 +484,6 @@ int LCD_init_module(void)
     gpio_export(D6, false);
     gpio_export(D7, false);
 
-//     init_flag = true;
-
-//     usleep_range(POWERUP_DELAY_MS, POWERUP_DELAY_MS + 10); 
-// /* set 8-bit mode 3 times on start see data sheet init sequence for detail */
-//     LCD_write(0x03);   
-//     usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
-//     LCD_write(0x03, CMD);
-//     usleep_range(FUNCSET_DELAY_uS, FUNCSET_DELAY_uS + 10);   
-//     LCD_write(0x03, CMD);
-//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-// /* set 4-bit mode now */
-//     LCD_write(0x02, CMD);
-//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10); 
-// /* Display Off */  
-//     LCD_write(0x0C, CMD);
-//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-// /* Display Clear */   
-//     LCD_write(0x01, CMD);
-//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-// /* entry mode set */   
-//     LCD_write(0x06, CMD);
-//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-// /* 2 rows */   
-//     LCD_write(0x28, CMD);
-//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-    
-//     init_flag = false;
     PDEBUG("Init Complete!");
     return result;
 
@@ -460,7 +509,7 @@ void LCD_cleanup_module(void)
 {
     dev_t devno = MKDEV(LCD_major, LCD_minor);
 
-    PDEBUG("LCD Cleanup");
+    PDEBUG("LCD Cleanup Module");
 
     gpio_unexport(RS);
     gpio_unexport(E);
