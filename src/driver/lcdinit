@@ -26,4 +26,7 @@ echo "Done!"
 
 echo "Setting RS pin for printing..."
 echo 1 > /sys/class/gpio/gpio7/value
+
+echo -n Init Complete! >> /dev/LCD_device
+
 echo "Done!"

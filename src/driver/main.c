@@ -292,30 +292,30 @@ int LCD_open(struct inode *inode, struct file *filp)
 
 /* add init sequence here using passed filp as arg for LCD_write? */
 
-    PDEBUG("Initializing LCD");
-/* set 8-bit mode 3 times on start see data sheet init sequence for detail */
-    usleep_range(POWERUP_DELAY_MS, POWERUP_DELAY_MS + 10);
-    LCD_write(filp, (char *)0x03, 1, 0);
-    usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
-    LCD_write(filp, (char *)0x03, 1, 0);
-    usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
-    LCD_write(filp, (char *)0x03, 1, 0);
-/* set 4-bit mode now */
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-    LCD_write(filp, (char *)0x02, 1, 0);
-/* Display Off */  
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-    LCD_write(filp, (char *)LCD_DISPLAY_OFF_INS, 1, 0);
-/* Display Clear */ 
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-    LCD_write(filp, (char *)LCD_CLEAR_INS, 1, 0);
-/* entry mode set */  
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-    LCD_write(filp, (char *)0x06, 1, 0);
-/* use 2 rows */   
-    usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-    LCD_write(filp, (char *)0x28, 1, 0);
-    PDEBUG("Done!");
+//     PDEBUG("Initializing LCD");
+// /* set 8-bit mode 3 times on start see data sheet init sequence for detail */
+//     usleep_range(POWERUP_DELAY_MS, POWERUP_DELAY_MS + 10);
+//     LCD_write(filp, (char *)0x03, 1, 0);
+//     usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
+//     LCD_write(filp, (char *)0x03, 1, 0);
+//     usleep_range(FUNCSET_DELAY_MS, FUNCSET_DELAY_MS + 10);
+//     LCD_write(filp, (char *)0x03, 1, 0);
+// /* set 4-bit mode now */
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+//     LCD_write(filp, (char *)0x02, 1, 0);
+// /* Display Off */  
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+//     LCD_write(filp, (char *)LCD_DISPLAY_OFF_INS, 1, 0);
+// /* Display Clear */ 
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+//     LCD_write(filp, (char *)LCD_CLEAR_INS, 1, 0);
+// /* entry mode set */  
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+//     LCD_write(filp, (char *)0x06, 1, 0);
+// /* use 2 rows */   
+//     usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+//     LCD_write(filp, (char *)0x28, 1, 0);
+//     PDEBUG("Done!");
 
     return 0;
 }
