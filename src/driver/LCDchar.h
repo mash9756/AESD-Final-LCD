@@ -5,8 +5,8 @@
  *  @brief      LCD character device structure defintion
 */
 
-/* max LCD message size, 16x2 */
-#define MAX_MSG_SIZE    (32)
+/* max LCD message size, only using 1 line */
+#define MAX_MSG_SIZE    (16)
 
 /* add instruction defines? see data sheet https://www.sparkfun.com/datasheets/LCD/HD44780.pdf*/
 
@@ -36,13 +36,6 @@
 /* LCD Instructions */
 #define LCD_CLEAR_INS         (0x01)
 #define LCD_DISPLAY_OFF_INS   (0x0C)
-
-/* output parameters, LCD is 2 rows of 16 chars */
-#define CHAR_PER_ROW    (16)
-#define NUM_OF_ROWS     (2)
-
-#define ROW1_ADDR       (0x80)
-#define ROW2_ADDR       (0xC0)
 
 #ifndef AESD_CHAR_DRIVER_AESDCHAR_H_
 #define AESD_CHAR_DRIVER_AESDCHAR_H_

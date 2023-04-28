@@ -170,72 +170,6 @@ exit:
     return retval;
 }
 
-
-/** TODO:    Do we need to change cursor position, add llseek?? */
-/**
- *  @name   LCD_llseek
- *  @brief  adds lseek functionality
- * 
- *  @param  filp    our device
- *  @param  offset  desired offest for given operation, change f_pos
- *  @param  whence  SEEK operation
- * 
- *  @return new file offset position
- * 
- *  followed general format from http://www.learningaboutelectronics.com/Articles/How-to-implement-the-lseek-file-operation-method-linux-device-driver.php
-*/
-loff_t LCD_llseek(struct file *filp, loff_t offset, int whence)
-{
-    loff_t new_f_pos;
-    struct LCD_dev *dev = filp->private_data;
-
-    PDEBUG("\nllseek");
-
-    if(mutex_lock_interruptible(&dev->mutex) != 0)
-    {
-        new_f_pos = -ERESTARTSYS;
-        goto exit;
-    }
-
-    switch (whence) 
-    {
-        case SEEK_SET:
-            new_f_pos = offset;
-            PDEBUG("\nSEEK_SET new f_pos: %lld", new_f_pos);
-            break;
-
-        case SEEK_CUR:
-            new_f_pos = filp->f_pos + offset;
-            PDEBUG("\nSEEK_CUR new f_pos: %lld", new_f_pos);
-            break;
-
-        case SEEK_END:
-            new_f_pos = MAX_MSG_SIZE - offset;
-            PDEBUG("\nSEEK_END new f_pos: %lld", new_f_pos);
-            break;
-
-        default:
-            return -EINVAL;
-    }
-
-/* check that new position doesn't extend past the end of our CB */
-    if(new_f_pos > MAX_MSG_SIZE) 
-        return -EINVAL;
-
-/* check that we don't back up too far */
-    if(new_f_pos < 0) 
-        new_f_pos = 0;
-
-/* update actual f_pos with new calculated value */
-    filp->f_pos = new_f_pos;
-    PDEBUG("\nUpdated f_pos = %lld", filp->f_pos);
-
-exit:
-    mutex_unlock(&dev->mutex);
-
-    return new_f_pos;
-}
-
 /**
  *  @name   LCD_unlocked_ioctl
  *  @brief  add ioctl functionality, supports single command to clear display
@@ -255,12 +189,6 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
     switch(cmd)
     {
-        /** 
-         * issue command to clear LCD display 
-         * 
-         * include ioctl header in VL6180x source
-         *  ioctl(fd, LCDCHAR_IOCCLEAR, 0?) 
-        */
         case LCDCHAR_IOCCLEAR:
         {
             PDEBUG("LCDCHAR_IOCCLEAR");
@@ -307,7 +235,6 @@ struct file_operations LCD_fops =
     .open           = LCD_open,
     .release        = LCD_release,
     .unlocked_ioctl = LCD_unlocked_ioctl
-    //.llseek     = LCD_llseek
 };
 
 static int LCD_setup_cdev(struct LCD_dev *dev)
