@@ -33,6 +33,8 @@ dev_t device = 0;
 struct LCD_dev LCD_device;
 static struct class *dev_class;
 
+static bool ioctl_flag = false;
+
 ssize_t LCD_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
@@ -95,7 +97,12 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     }
 
 /* returns 0 on success, >0 is number of bytes not written */
-    if(copy_from_user(input_buffer, buf, count))
+    if(ioctl_flag == true)
+    {
+        PDEBUG("ioctl write, no copy from user");
+        memcpy(input_buffer, buf, count);
+    }    
+    else if(copy_from_user(input_buffer, buf, count))
     {
         PDEBUG("Copy from user failed");
         retval = -EFAULT;
@@ -244,8 +251,6 @@ exit:
 long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     long retval = 0;
-    struct LCD_dev *dev = filp->private_data;
-
     PDEBUG("ioctl");
 
     switch(cmd)
@@ -259,17 +264,17 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         case LCDCHAR_IOCCLEAR:
         {
             PDEBUG("LCDCHAR_IOCCLEAR");
+            ioctl_flag = true;
             gpio_set_value(RS, CMD);
-            /* pass opened filp, clear command, count, file position */
             LCD_write(filp, (char *)LCD_CLEAR_INS, 1, 0);
             gpio_set_value(RS, CHAR);
+            ioctl_flag = false;
             break;
         }
         default:
             PDEBUG("cmd not recognized");
     }
-exit:
-/* release mutex */
+
     PDEBUG("Returning: %ld", retval);
     return retval;
 }
