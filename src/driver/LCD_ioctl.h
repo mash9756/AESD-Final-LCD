@@ -28,7 +28,7 @@ struct LCD_clear {
     /**
      * The zero referenced write command to seek into
      */
-    uint32_t clear_cmd;
+    char *clear_cmd;
 };
 
 // Pick an arbitrary unused value from https://github.com/torvalds/linux/blob/master/Documentation/userspace-api/ioctl/ioctl-number.rst
