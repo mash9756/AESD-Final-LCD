@@ -202,8 +202,11 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
             ioctl_flag = true;
             gpio_set_value(RS, CMD);
+            usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
             LCD_write(filp, &ins, 1, 0);
+            usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
             gpio_set_value(RS, CHAR);
+            usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
             ioctl_flag = false;
             break;
         }
