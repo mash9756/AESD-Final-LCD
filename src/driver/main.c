@@ -58,7 +58,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     struct LCD_dev *dev = filp->private_data;  /* get pointer to our char device */
-    ssize_t retval = 0;
+    long retval = 0;
     char *input_buffer = NULL;
     size_t i = 0;
 
@@ -185,7 +185,7 @@ exit:
 long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     long retval = 0;
-    char *ins;
+    char ins = 0;
     PDEBUG("ioctl");
 
     switch(cmd)
@@ -193,7 +193,7 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         case LCDCHAR_IOCCLEAR:
         {
             PDEBUG("LCDCHAR_IOCCLEAR");
-            if(copy_from_user(ins, (const void __user *) arg, sizeof(ins)) != 0)
+            if(copy_from_user(&ins, (const void __user *) arg, sizeof(ins)) != 0)
             {
                 PDEBUG("ioctl copy_from_user failed");
                 retval = -EFAULT;
@@ -202,7 +202,7 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
             ioctl_flag = true;
             gpio_set_value(RS, CMD);
-            LCD_write(filp, ins, 1, 0);
+            LCD_write(filp, &ins, 1, 0);
             gpio_set_value(RS, CHAR);
             ioctl_flag = false;
             break;
