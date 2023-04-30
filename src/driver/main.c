@@ -100,7 +100,8 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     if(ioctl_flag == true)
     {
         PDEBUG("ioctl write, no copy from user");
-        input_buffer = &buf;
+        //input_buffer = buf;
+        memcpy(input_buffer, buf, count);
     }    
     else if(copy_from_user(input_buffer, buf, count))
     {
