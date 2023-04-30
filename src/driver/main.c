@@ -185,7 +185,7 @@ exit:
 long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     long retval = 0;
-    char *cmd;
+    char *ins;
     PDEBUG("ioctl");
 
     switch(cmd)
@@ -193,7 +193,7 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         case LCDCHAR_IOCCLEAR:
         {
             PDEBUG("LCDCHAR_IOCCLEAR");
-            if(copy_from_user(cmd, (const void __user *) arg, sizeof(cmd)) != 0)
+            if(copy_from_user(ins, (const void __user *) arg, sizeof(ins)) != 0)
             {
                 PDEBUG("ioctl copy_from_user failed");
                 retval = -EFAULT;
@@ -202,7 +202,7 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
             ioctl_flag = true;
             gpio_set_value(RS, CMD);
-            LCD_write(filp, cmd, 1, 0);
+            LCD_write(filp, ins, 1, 0);
             gpio_set_value(RS, CHAR);
             ioctl_flag = false;
             break;
