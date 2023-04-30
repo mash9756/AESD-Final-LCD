@@ -100,8 +100,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     if(ioctl_flag == true)
     {
         PDEBUG("ioctl write, no copy from user");
-        //input_buffer = buf;
-        memcpy(input_buffer, buf, count);
+        input_buffer[0] = LCD_CLEAR_INS;
     }    
     else if(copy_from_user(input_buffer, buf, count))
     {
@@ -186,29 +185,24 @@ exit:
 long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     long retval = 0;
-    struct LCD_clear clear;
     PDEBUG("ioctl");
-    PDEBUG("cmd: %d | arg: %ld", cmd, arg);
 
     switch(cmd)
     {
         case LCDCHAR_IOCCLEAR:
         {
             PDEBUG("LCDCHAR_IOCCLEAR");
-            if(copy_from_user(&clear, (const void __user *) arg, sizeof(clear)))
-            {
-                PDEBUG("ioctl copy_from_user failed");
-                retval = -EFAULT;
-                goto exit;
-            }
-
             ioctl_flag = true;
+
             gpio_set_value(RS, CMD);
             usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
-            LCD_write(filp, clear.clear_cmd, 1, 0);
+
+            LCD_write(filp, (char *)LCD_CLEAR_INS, 1, 0);
             usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+
             gpio_set_value(RS, CHAR);
             usleep_range(CMD_DELAY_uS, CMD_DELAY_uS + 10);
+
             ioctl_flag = false;
             break;
         }
@@ -216,7 +210,6 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             PDEBUG("cmd not recognized");
     }
 
-exit:
     PDEBUG("Returning: %ld", retval);
     return retval;
 }

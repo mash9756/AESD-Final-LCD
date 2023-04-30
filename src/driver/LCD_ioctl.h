@@ -24,10 +24,8 @@
  * A structure to be passed by IOCTL from user space to kernel space, describing the type
  * of seek performed on the LCDchar driver
  */
-struct LCD_clear {
-    /**
-     * The zero referenced write command to seek into
-     */
+struct LCD_clear 
+{
     char *clear_cmd;
 };
 
