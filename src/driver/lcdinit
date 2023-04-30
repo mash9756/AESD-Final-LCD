@@ -28,5 +28,16 @@ echo "Setting RS pin for printing..."
 echo 1 > /sys/class/gpio/gpio7/value
 
 echo -n Init Complete! >> /dev/LCD_device
+sleep 3
+
+echo 0 > /sys/class/gpio/gpio7/value
+sleep .05
+echo -e -n '\x01' >> /dev/LCD_device
+sleep .05
+echo 1 > /sys/class/gpio/gpio7/value
+sleep .05
+
+echo -n Starting ALS... >> /dev/LCD_device
+sleep 3
 
 echo "Done!"
