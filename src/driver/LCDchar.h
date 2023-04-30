@@ -8,8 +8,6 @@
 /* max LCD message size, only using 1 line */
 #define MAX_MSG_SIZE    (16)
 
-/* add instruction defines? see data sheet https://www.sparkfun.com/datasheets/LCD/HD44780.pdf*/
-
 /* LCD pin definitions */
 #define RS    (7)
 #define E     (8)

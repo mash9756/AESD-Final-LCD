@@ -1,11 +1,9 @@
-/*
- * LCD_ioctl.h
- *
- *  Created on: Oct 23, 2019
- *      Author: Dan Walkes
- *
- *  @brief Definitins for the ioctl used on LCD char devices for assignment 9
- */
+/**
+ *  @file       LCD_ioctl.h
+ *  @author     Mark Sherman
+ * 
+ *  @brief      LCD ioctl header
+*/
 
 #ifndef LCD_IOCTL_H
 #define LCD_IOCTL_H
@@ -19,8 +17,6 @@
 #endif
 
 /**
- * I dont think we need this at all? we just want to clear
- * 
  * A structure to be passed by IOCTL from user space to kernel space, describing the type
  * of seek performed on the LCDchar driver
  */
@@ -38,7 +34,6 @@ struct LCD_clear
 
 // Define a write command from the user point of view, use command number 1
 
-/* can last arg be 0? */
 #define LCDCHAR_IOCCLEAR _IOWR(LCD_IOC_MAGIC, 1, struct LCD_clear)
 /**
  * The maximum number of commands supported, used for bounds checking

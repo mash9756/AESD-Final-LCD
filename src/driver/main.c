@@ -289,10 +289,7 @@ int LCD_init_module(void)
         goto class_invalid;
     }
 
-/** Creating device 
- * TODO:    Might be redundant to alloc_chrdev_regiod? 
- *          seems like echo to both LCDchar and LCD_device work
-*/
+/* Creating device */
     if(IS_ERR(device_create(dev_class, NULL, device, NULL, "LCD_device")))
     {
         PDEBUG( "Cannot create the Device \n");
@@ -379,14 +376,10 @@ int LCD_init_module(void)
     gpio_direction_output(D6, 0);
     gpio_direction_output(D7, 0);
 
-/** TODO: Remove LCD data bus pins from export for safety */
+/** Export RS and E GPIO pin for user access */
     PDEBUG("Exporting GPIO for user access");
     gpio_export(RS, false);
     gpio_export(E, false);
-    gpio_export(D4, false);
-    gpio_export(D5, false);
-    gpio_export(D6, false);
-    gpio_export(D7, false);
 
     PDEBUG("Init Complete!");
     return result;
