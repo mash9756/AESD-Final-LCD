@@ -21,7 +21,7 @@
 #include <linux/gpio.h>     //GPIO
 
 #include "LCDchar.h"
-#include "LCD_ioctl"
+#include "LCD_ioctl.h"
 
 int LCD_major =   0; // use dynamic major
 int LCD_minor =   0;
@@ -100,7 +100,7 @@ ssize_t LCD_write(struct file *filp, const char __user *buf, size_t count,
     if(ioctl_flag == true)
     {
         PDEBUG("ioctl write, no copy from user");
-        input_buffer[0] = LCD_CLEAR_INS;
+        input_buffer[0] = buf[0];
     }    
     else if(copy_from_user(input_buffer, buf, count))
     {
@@ -194,7 +194,7 @@ long LCD_unlocked_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             PDEBUG("LCDCHAR_IOCCLEAR");
             ioctl_flag = true;
             gpio_set_value(RS, CMD);
-            LCD_write(filp, (char *)LCD_CLEAR_INS, 1, 0);
+            LCD_write(filp, (char *)arg, 1, 0);
             gpio_set_value(RS, CHAR);
             ioctl_flag = false;
             break;

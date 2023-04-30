@@ -33,10 +33,6 @@
 #define CMD     (0)
 #define CHAR    (1)
 
-/* LCD Instructions */
-#define LCD_CLEAR_INS         (0x01)
-#define LCD_DISPLAY_OFF_INS   (0x0C)
-
 #ifndef AESD_CHAR_DRIVER_AESDCHAR_H_
 #define AESD_CHAR_DRIVER_AESDCHAR_H_
 

@@ -34,6 +34,10 @@ struct LCD_clear {
 // Pick an arbitrary unused value from https://github.com/torvalds/linux/blob/master/Documentation/userspace-api/ioctl/ioctl-number.rst
 #define LCD_IOC_MAGIC 0x16
 
+/* LCD Instructions */
+#define LCD_CLEAR_INS         (0x01)
+#define LCD_DISPLAY_OFF_INS   (0x0C)
+
 // Define a write command from the user point of view, use command number 1
 
 /* can last arg be 0? */
